@@ -1,11 +1,11 @@
 # Databricks notebook source
 # Get authentication variables and databricks secret scope
 
-storage_account = 'adlsdbdemodevwesteu1'
+storage_account = dbutils.secrets.get(scope="adlsname", key = "adlsname") #Name of storage account
 storage_container = 'bronze'
-servicePrincipalId = 'e325d73c-6f99-4a18-9806-6d9b1255b027'
-ServicePrincipalKey = '8WL8Q~FgfsCrRs1g~DppuRBtfeqmmeM_x4zD3cKo'
-tenantID = 'a082dbbc-d89d-4018-b336-7279f22177eb'
+servicePrincipalId = dbutils.secrets.get(scope="principalid", key = "principalid") # Application (client) ID
+ServicePrincipalKey = dbutils.secrets.get(scope="principalkey", key = "principalkey") # Generated client secret (value) for the application
+tenantID = dbutils.secrets.get(scope="tenantid", key = "tenantid") # Directory (tenant) id of the application
 Directory = "https://login.microsoftonline.com/"+tenantID+"/oauth2/token"
 
 configs = {"fs.azure.account.auth.type" : "OAuth",
@@ -16,7 +16,7 @@ configs = {"fs.azure.account.auth.type" : "OAuth",
             }
 
 #Unmount if needed
-#dbutils.fs.unmount("/mnt/"+storage_account+"/"+storage_container)
+dbutils.fs.unmount("/mnt/"+storage_account+"/"+storage_container)
 
 # Mount data lake into DBFS at the mnt location
 
@@ -28,7 +28,3 @@ dbutils.fs.mount(
 # COMMAND ----------
 
 display(dbutils.fs.mounts())
-
-# COMMAND ----------
-
-
