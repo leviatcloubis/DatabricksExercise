@@ -39,8 +39,15 @@ ingest_folder(mount_location + '/disturbances', 'parquet', 'stream_disturbances_
 # MAGIC *
 # MAGIC from stream_disturbances_bronze
 # MAGIC order by 1 desc
+# MAGIC limit 20
 # MAGIC ;
 
 # COMMAND ----------
 
+# Alternatively, read into Pyspark DF
+from pyspark.sql.functions import from_unixtime, desc, col
+disturbances_df = spark.read.table('stream_disturbances_bronze').withColumn('readable_timestamp', from_unixtime('timestamp'))
 
+# COMMAND ----------
+
+display(disturbances_df.orderBy(col('timestamp').desc()).limit(20))
