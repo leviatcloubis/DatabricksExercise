@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ## Call get disturbances API in order to retrieve a list of all stations
+# MAGIC ## Call get disturbances API in order to retrieve disturbances
 
 # COMMAND ----------
 
@@ -55,3 +55,13 @@ spark_df.show()
 
 current_timestamp = datetime.datetime.now(pytz.timezone('Europe/Brussels')).strftime("%Y%m%d%H%M")
 spark_df.write.parquet(f"{mount_location}/disturbances/{current_timestamp}")
+
+# COMMAND ----------
+
+# DBTITLE 1,Convert string timestamp to timestamp type
+#spark_df.withColumn("timestamped",from_unixtime(col('timestamp'))).show()
+
+
+# COMMAND ----------
+
+

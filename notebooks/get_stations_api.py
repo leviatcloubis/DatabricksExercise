@@ -33,3 +33,11 @@ spark_df = spark.createDataFrame(response['station'],
                           StructField("@id", StringType()), 
                           StructField("standardname", StringType()) 
                       ]))
+
+# COMMAND ----------
+
+pandas_df
+
+# COMMAND ----------
+
+

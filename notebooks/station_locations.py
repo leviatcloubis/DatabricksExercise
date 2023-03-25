@@ -149,3 +149,29 @@ total_count = disturbance_locations_df.count()
 
 print(f"Zip emptiness: {zip_null} null out of {total_count} ({100*zip_null/total_count:.1f}%)")
 print(f"NIS emptiness: {nis_null} null out of {total_count} ({100*nis_null/total_count:.1f}%)")
+
+# COMMAND ----------
+
+responses
+
+# COMMAND ----------
+
+all_names_df.show()
+
+# COMMAND ----------
+
+# set mount location variable
+
+storage_account = dbutils.secrets.get(scope="adlsname", key = "adlsname") #Name of storage account
+storage_container = 'bronze'
+
+mount_location = "/mnt/"+storage_account+"/"+storage_container
+
+# Write pyspark df to Parquet file on bronze container with /disturbances/yyyymmddhhmm
+
+#current_timestamp = datetime.datetime.now(pytz.timezone('Europe/Brussels')).strftime("%Y%m%d%H%M")
+all_names_df.write.parquet(f"{mount_location}/stations_geo_data")
+
+# COMMAND ----------
+
+
