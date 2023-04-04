@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ## PART 1: Call get disturbances API in order to retrieve a list of all stations
+# MAGIC ## PART 1: Call get disturbances API in order to retrieve disturbances
 
 # COMMAND ----------
 
@@ -56,8 +56,8 @@ disturbances_df = spark.createDataFrame(response['disturbance'],
                           StructField("richtext", StringType()), 
                           StructField("descriptionLinks", StringType())   
                       ])).withColumn('timestamp_from_unix', from_unixtime('timestamp'))\
-                         .withColumn('import_timestamp', current_timestamp())
-                                    
+                         .withColumn('import_timestamp', current_timestamp())\
+                         .withColumn('created_by', lit('Levi Devos'))      
 
 disturbances_df.show()
 
@@ -161,7 +161,3 @@ disturbance_locations_df = disturbances_df\
 # DBTITLE 1,Write pyspark df to Parquet file on bronze container with /disturbances_enriched/yyyymmddhhmm
 current_timestamp = datetime.datetime.now(pytz.timezone('Europe/Brussels')).strftime("%Y%m%d%H%M")
 disturbance_locations_df.write.parquet(f"{mount_location}/disturbances_enriched/{current_timestamp}")
-
-# COMMAND ----------
-
-
