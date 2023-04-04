@@ -22,8 +22,9 @@ def ingest_folder(folder, data_format, table, duplicates_array):
   bronze_products = (spark.readStream
                       .format("cloudFiles")
                       .option("cloudFiles.format", data_format)
-                      .option("cloudFiles.inferColumnTypes", "true")
-                      .option("cloudFiles.schemaEvolutionMode","addNewColumns") # Add new columns to the schema
+                     .option("ignoreMissingFiles", "true") # If checkpoints contains files which can not be found --> No error
+                     .option("cloudFiles.inferColumnTypes", "true") # Only for json and csv
+                      .option("cloudFiles.schemaEvolutionMode","addNewColumns") # Write new column to the schema after stopping stream
                       .option("cloudFiles.schemaLocation",
                               f"{mount_location}/schema/{table}") #Autoloader will automatically infer all the schema & evolution
                      .load(folder))
@@ -34,8 +35,8 @@ def ingest_folder(folder, data_format, table, duplicates_array):
             .option("checkpointLocation",
                     f"{mount_location}/checkpoint/{table}") #exactly once delivery on Delta tables over restart/kill
             .option("mergeSchema", "true") #merge any new column dynamically
-            #.trigger(once = True) #Remove for real time streaming
-            .table(table)) #Table will be created if we haven't specified the schema first
+            .trigger(once = True) #Remove for real time streaming
+            .table(table)) #Table will be created if the schema is new
 
 
 # COMMAND ----------
