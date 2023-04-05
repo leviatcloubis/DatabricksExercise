@@ -64,39 +64,4 @@ ingest_folder(mount_location + '/disturbances_enriched', 'parquet', mount_locati
 
 # COMMAND ----------
 
-# Alternatively, read into Pyspark DF
-#from pyspark.sql.functions import from_unixtime, desc, col
-#disturbances_df = spark.read.table('stream_disturbances_bronze')
 
-# COMMAND ----------
-
-#display(disturbances_df.orderBy(col('timestamp').desc()).limit(20))
-
-# COMMAND ----------
-
-# DBTITLE 1,Stream_disturbances_bronze_enriched Delta table is now ready for querying
-# MAGIC %sql 
-# MAGIC -- Note the "_rescued_data" column. If we receive wrong data not matching existing schema, it will be stored here 
-# MAGIC select 
-# MAGIC --from_unixtime(timestamp),
-# MAGIC *
-# MAGIC from stream_disturbances_bronze_enriched
-# MAGIC order by import_timestamp desc
-# MAGIC --limit 20
-# MAGIC ;
-
-# COMMAND ----------
-
-# MAGIC %sql 
-# MAGIC -- Note the "_rescued_data" column. If we receive wrong data not matching existing schema, it will be stored here 
-# MAGIC select 
-# MAGIC --from_unixtime(timestamp),
-# MAGIC *
-# MAGIC from stream_disturbances_bronze_enriched
-# MAGIC order by import_timestamp desc
-# MAGIC --limit 20
-# MAGIC ;
-
-# COMMAND ----------
-
-print("newly, not committed, print")
