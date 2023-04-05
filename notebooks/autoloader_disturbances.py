@@ -18,7 +18,7 @@ mount_location = "/mnt/"+storage_account+"/"+storage_container
 # DBTITLE 1,Create ingestion function to configure Autoloader in order to store parquet bronze data in "bronze" Delta tables, supporting schema evolution and incorrect data
 # Create ingest function (autoloader)
 
-def ingest_folder(folder, data_format, table, duplicates_array):
+def ingest_folder(folder, data_format, landing, duplicates_array, table):
   bronze_products = (spark.readStream
                       .format("cloudFiles")
                       .option("cloudFiles.format", data_format)
@@ -32,19 +32,21 @@ def ingest_folder(folder, data_format, table, duplicates_array):
   bronze_products = bronze_products.dropDuplicates(duplicates_array)
                      
   return (bronze_products.writeStream
+            .format("delta")
             .option("checkpointLocation",
                     f"{mount_location}/checkpoint/{table}") #exactly once delivery on Delta tables over restart/kill
             .option("mergeSchema", "true") #merge any new column dynamically
             .trigger(once = True) #Remove for real time streaming
-            .table(table)) #Table will be created if the schema is new
+            .start(landing)
+  )
 
 
 # COMMAND ----------
 
 # DBTITLE 1,Call upon function to start both streams
-ingest_folder(mount_location + '/disturbances', 'parquet', 'stream_disturbances_bronze', ['title','timestamp'])
+ingest_folder(mount_location + '/disturbances', 'parquet', mount_location + '/disturbances/stream', ['title','timestamp'], "disturbances")
 
-ingest_folder(mount_location + '/disturbances_enriched', 'parquet', 'stream_disturbances_bronze_enriched', ['title','timestamp','name'])
+ingest_folder(mount_location + '/disturbances_enriched', 'parquet', mount_location + '/disturbances_enriched/stream', ['title','timestamp','name'], "disturbances_enriched")
 
 
 # COMMAND ----------
@@ -97,4 +99,4 @@ ingest_folder(mount_location + '/disturbances_enriched', 'parquet', 'stream_dist
 
 # COMMAND ----------
 
-
+print("newly, not committed, print")

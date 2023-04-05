@@ -161,3 +161,11 @@ disturbance_locations_df = disturbances_df\
 # DBTITLE 1,Write pyspark df to Parquet file on bronze container with /disturbances_enriched/yyyymmddhhmm
 current_timestamp = datetime.datetime.now(pytz.timezone('Europe/Brussels')).strftime("%Y%m%d%H%M")
 disturbance_locations_df.write.parquet(f"{mount_location}/disturbances_enriched/{current_timestamp}")
+
+# COMMAND ----------
+
+display(disturbance_locations_df)
+
+# COMMAND ----------
+
+
