@@ -44,9 +44,9 @@ def ingest_folder(folder, data_format, landing, duplicates_array, table):
 # COMMAND ----------
 
 # DBTITLE 1,Call upon function to start both streams
-ingest_folder(mount_location + '/disturbances', 'parquet', mount_location + '/disturbances/stream', ['title','timestamp'], "disturbances")
+ingest_folder(mount_location + '/disturbances', 'parquet', mount_location + '/stream/disturbances', ['title','timestamp'], "disturbances")
 
-ingest_folder(mount_location + '/disturbances_enriched', 'parquet', mount_location + '/disturbances_enriched/stream', ['title','timestamp','name'], "disturbances_enriched")
+ingest_folder(mount_location + '/disturbances_enriched', 'parquet', mount_location + '/stream/disturbances_enriched', ['title','timestamp','name'], "disturbances_enriched")
 
 
 # COMMAND ----------
