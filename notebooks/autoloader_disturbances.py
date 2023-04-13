@@ -64,4 +64,31 @@ ingest_folder(mount_location + '/disturbances_enriched', 'parquet', mount_locati
 
 # COMMAND ----------
 
+print(mount_location + '/disturbances')
+
+# COMMAND ----------
+
+# MAGIC %sql 
+# MAGIC -- Note the "_rescued_data" column. If we receive wrong data not matching existing schema, it will be stored here 
+# MAGIC select 
+# MAGIC --from_unixtime(timestamp),
+# MAGIC *
+# MAGIC from stream_disturbances_bronze
+# MAGIC order by timestamp_from_unix desc
+# MAGIC limit 20
+# MAGIC ;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select 
+# MAGIC id, title, description, link
+# MAGIC --,
+# MAGIC --RANK() OVER (PARTITION BY title ORDER BY id)
+# MAGIC from stream_disturbances_bronze
+# MAGIC QUALIFY RANK() OVER (PARTITION BY title ORDER BY id) = 1
+# MAGIC order by timestamp_from_unix desc
+
+# COMMAND ----------
+
 
