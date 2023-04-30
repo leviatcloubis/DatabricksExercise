@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC 
+# MAGIC
 # MAGIC ## Create two streams from the following parquet files
 # MAGIC - disturbances 
 # MAGIC - disturbances_enriched 
@@ -48,46 +48,6 @@ ingest_folder(mount_location + '/disturbances', 'parquet', mount_location + '/st
 
 ingest_folder(mount_location + '/disturbances_enriched', 'parquet', mount_location + '/stream/disturbances_enriched', ['title','timestamp','name'], "disturbances_enriched")
 
-
-# COMMAND ----------
-
-# DBTITLE 1,Stream_disturbances_bronze Delta table is now ready for querying
-# MAGIC %sql 
-# MAGIC -- Note the "_rescued_data" column. If we receive wrong data not matching existing schema, it will be stored here 
-# MAGIC select 
-# MAGIC --from_unixtime(timestamp),
-# MAGIC *
-# MAGIC from stream_disturbances_bronze
-# MAGIC order by timestamp_from_unix desc
-# MAGIC limit 20
-# MAGIC ;
-
-# COMMAND ----------
-
-print(mount_location + '/disturbances')
-
-# COMMAND ----------
-
-# MAGIC %sql 
-# MAGIC -- Note the "_rescued_data" column. If we receive wrong data not matching existing schema, it will be stored here 
-# MAGIC select 
-# MAGIC --from_unixtime(timestamp),
-# MAGIC *
-# MAGIC from stream_disturbances_bronze
-# MAGIC order by timestamp_from_unix desc
-# MAGIC limit 20
-# MAGIC ;
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC select 
-# MAGIC id, title, description, link
-# MAGIC --,
-# MAGIC --RANK() OVER (PARTITION BY title ORDER BY id)
-# MAGIC from stream_disturbances_bronze
-# MAGIC QUALIFY RANK() OVER (PARTITION BY title ORDER BY id) = 1
-# MAGIC order by timestamp_from_unix desc
 
 # COMMAND ----------
 

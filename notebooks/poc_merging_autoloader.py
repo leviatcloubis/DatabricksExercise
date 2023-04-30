@@ -7,8 +7,13 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC 
+# MAGIC
 # MAGIC select * from deltastream.batch
+
+# COMMAND ----------
+
+deltastream.batch.clone("/mnt/adlsdbnotrialdev2023/bronze/stream/deltaclone", isShallow, replace) # clone the source at latest version
+
 
 # COMMAND ----------
 

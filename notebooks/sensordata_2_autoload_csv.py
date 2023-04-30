@@ -1,7 +1,7 @@
 # Databricks notebook source
 storage_account = dbutils.secrets.get(scope="adlsname", key = "adlsname") #Name of storage account
-storage_container_input = 'sensor-csvlanding'
-storage_container_output = 'sensor-deltastream'
+storage_container_input = 'csv-staging'
+storage_container_output = 'bronze'
 mount_location = "/mnt/"+storage_account+"/"+storage_container_input
 mount_location_output = "/mnt/"+storage_account+"/"+storage_container_output
 
@@ -21,7 +21,7 @@ def ingest_folder(folder, data_format, landing, table):
                      .option("cloudFiles.useNotifications", "true")
                     #.option("cloudFiles.includeExistingFiles", "true")
                     #.option("ignoreExtension", "true")
-                    .option("cloudFiles.resourceGroup", 'rg-cloubis-dbdemo-april2023-dev-westeu-1')
+                    .option("cloudFiles.resourceGroup", 'rg-db-demo-notrial-april2023-dev-westeu-1')
                     #.option("cloudFiles.region", omitted)
                     #.option("cloudFiles.connectionString", omitted)
                     .option("cloudFiles.subscriptionId", 'cc7a2c07-0b5a-428a-8c79-20197553677d')
