@@ -315,6 +315,7 @@ from pyspark.sql.functions import sha1, col, initcap, to_timestamp
 # COMMAND ----------
 
 # MAGIC %sql select * from churn_orders;
+# MAGIC #extra comment
 
 # COMMAND ----------
 
