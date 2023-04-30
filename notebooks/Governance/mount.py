@@ -115,4 +115,38 @@ dbutils.fs.mount(
 
 # COMMAND ----------
 
+storage_account = dbutils.secrets.get(scope="adlsname", key = "adlsname") #Name of storage account
+storage_container = 'bronze'
+mount_location = f"/mnt/{storage_account}/{storage_container}"
+
+dbutils.fs.ls(mount_location)
+
+
+# COMMAND ----------
+
+fileInfos = dbutils.fs.ls(f"{mount_location}/disturbances_enriched")  
+monthPaths = []  
+for fileinfo in fileInfos:  
+    monthPaths.append(fileinfo.path)  
+  
+monthPaths.sort(reverse=True)  
+monthPaths
+
+# COMMAND ----------
+
+import time
+
+path = spark._jvm.org.apache.hadoop.fs.Path
+fs = path(f"{mount_location}/stream/disturbances_enriched").getFileSystem(sc._jsc.hadoopConfiguration())
+
+res = fs.listFiles(path(f"{mount_location}/stream/disturbances_enriched"), True)
+
+while res.hasNext():
+  file = res.next()
+  localTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(file.getModificationTime() / 1000))
+  print(f"{file.getPath()}: {localTime}")
+
+
+# COMMAND ----------
+
 

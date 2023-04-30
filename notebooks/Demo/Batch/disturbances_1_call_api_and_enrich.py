@@ -71,7 +71,7 @@ disturbances_df.write.parquet(f"{mount_location}/disturbances/{current_timestamp
 
 # MAGIC %md
 # MAGIC ## PART 2: Preparing station locations for using in PowerBI
-# MAGIC 
+# MAGIC
 # MAGIC The goal is to create a heatmap of disturbances.
 # MAGIC The railAPI provides us with disturbances which are being stored in the `abfss://bronze@[REDACTED].dfs.core.windows.net/disturbances/timestamp` location. Similarly, we can retrieve each station's details from the API. This notebook combines the two in an attempt to enricht the disturbances with location data.
 
@@ -97,7 +97,7 @@ stations_df.show()
 # MAGIC %md
 # MAGIC ## Station name parsing
 # MAGIC Stations have a 'standard name'. This is typically just the name of the stations in the relevant languages, e.g. "Mouterij/Germoir" or "Brussel-Kapellekerk/Bruxelles-Chapelle". Sometimes it's also a fixed choice of language, that may or may not correspond to the 'regular' (display?) name. 
-# MAGIC 
+# MAGIC
 # MAGIC We will use these names to match stations to disturbances. Both names will be extracted into columns.
 
 # COMMAND ----------

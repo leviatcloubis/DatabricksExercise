@@ -2,7 +2,7 @@
 # MAGIC %md-sandbox
 # MAGIC # Building a Spark Data pipeline with Delta Lake
 # MAGIC
-# MAGIC With this notebook we are buidling an end-to-end pipeline consuming a railtime API and implementing a *medaillon / multi-hop* architecture going from bronze to gold.
+# MAGIC With this notebook we are buidling an end-to-end pipeline consuming a railtime API and implementing a *medaillon / multi-hop* architecture going from bronze to gold (no landing for simplification reasons).
 # MAGIC
 # MAGIC With traditional systems this can be challenging due to:
 # MAGIC  * data quality issues
@@ -37,15 +37,15 @@
 # MAGIC %md-sandbox
 # MAGIC # Steps
 # MAGIC
-# MAGIC We will develop the following pipeline, introducing a couple of discussed concepts:
+# MAGIC We will develop the following pipeline, introducing a couple of discussed concepts and functions:
 # MAGIC
-# MAGIC  * API call --> Parse to parquet --> store on bronzen layer with .write.parquet
-# MAGIC  * Bronzen layer --> Autoloader --> store on silver layer with delta format
-# MAGIC  * Silver layer --> Read delta path into stream --> Transformations --> store on golden layer with delta format
+# MAGIC  * 1: API call --> Parse to parquet --> store on bronzen layer with .write.parquet
+# MAGIC  * 2: Bronzen layer --> Autoloader --> store on silver layer with delta format
+# MAGIC  * 3: Silver layer --> Read delta path into stream --> Transformations --> store on golden layer with delta format
 
 # COMMAND ----------
 
-# DBTITLE 1,Let's start off with importing some useful packages
+# DBTITLE 1,Let's start off with importing some usefull/needed packages
 # Import packages
 
 import http
@@ -94,11 +94,12 @@ display(dbutils.fs.mounts())
 # MAGIC %md
 # MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) Creating our mount variable
 # MAGIC
-# MAGIC Let's create a mount variable which we can use to write to
+# MAGIC Let's create a mount variable which we can use to refer to
 
 # COMMAND ----------
 
 # save storage account name and container name
+# If you have trouble with retrieving the adlsname: 'adlsdbnotrialdev2023'
 
 storage_account = dbutils.secrets.get(scope="adlsname", key = "adlsname") #Name of storage account
 storage_container = 'exercise'
@@ -136,7 +137,8 @@ disturbances_df = spark.createDataFrame(response['disturbance'],
                           StructField("timestamp", StringType()),
                           StructField("richtext", StringType()), 
                           StructField("descriptionLinks", StringType())   
-                      ]))#.withColumn('import_timestamp', current_timestamp())\
+                      ]))#.withColumn('schema_drift', lit('this_will_cause_schema_drift'))\
+                         #.withColumn('import_timestamp', current_timestamp())\
                          #.withColumn('created_by', lit('Levi Devos'))      
 
 display(disturbances_df)
@@ -145,7 +147,9 @@ display(disturbances_df)
 
 # COMMAND ----------
 
-# DBTITLE 1,# Save Pyspark dataframe into bronze layer with suffix /disturbances/yyyymmddhhmm
+# DBTITLE 1,1: Save Pyspark dataframe into bronze layer with suffix /yourname/layer/disturbances/yyyymmddhhmm
+# Save the pyspark dataframe by hard coding the appropriate values: yourname, medaillon layer, ....
+
 current_timestamp = datetime.datetime.now(pytz.timezone('Europe/Brussels')).strftime("%Y%m%d%H%M")
 
 disturbances_df.write.parquet(f"{mount_location}/yourname/bronze/disturbances/{current_timestamp}")
@@ -156,7 +160,7 @@ disturbances_df.write.parquet(f"{mount_location}/yourname/bronze/disturbances/{c
 
 # MAGIC %md-sandbox
 # MAGIC
-# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) 1/ Loading our bronze data using Databricks Autoloader (cloud_files) onto silver
+# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) 2/ Loading our bronze data using Databricks Autoloader (cloud_files) onto silver
 # MAGIC <div style="float:right">
 # MAGIC   <img width="700px" src="files/tables/schema.png"/>
 # MAGIC </div>
@@ -164,7 +168,7 @@ disturbances_df.write.parquet(f"{mount_location}/yourname/bronze/disturbances/{c
 # MAGIC The Autoloader allows us to efficiently ingest millions of files from a cloud storage, and support efficient schema inference and evolution at scale.
 # MAGIC
 # MAGIC Let's use it to ingest the bronze parquet data being delivered in our storage account
-# MAGIC into the *silver* table
+# MAGIC into the *silver* layer
 
 # COMMAND ----------
 
@@ -174,6 +178,7 @@ def ingest_folder(folder, data_format, landing, table):
                       .format("cloudFiles")
                       .option("cloudFiles.format", data_format)
                       .option("cloudFiles.inferColumnTypes", "true")
+                      #.option("cloudFiles.schemaEvolutionMode", "rescue")
                       .option("cloudFiles.schemaLocation",
                               f"{mount_location}/yourname/silver/disturbances/schema/{table}") #Autoloader will automatically infer all the schema & evolution
                       .load(folder))
@@ -204,19 +209,22 @@ ingest_folder(f"{mount_location}/yourname/bronze/disturbances", 'parquet', f"{mo
 
 # COMMAND ----------
 
-# DBTITLE 1,We can read the delta table from its source and save it as a table in order to query it via SQL
+# DBTITLE 1,We can read the delta table from its source
 # Load the data from its source.
 
 from delta.tables import *
 from pyspark.sql.functions import *
 
-deltaTable = DeltaTable.forPath(spark, f"{mount_location}/yourname/silver/disturbances")
+df = spark.read.load(f"{mount_location}/yourname/silver/disturbances")
 
+display(df)
 ## EXERCISE: Complete the path in order to read the Delta table from your stream path 
 
 # COMMAND ----------
 
 # DBTITLE 1,We just realised we have to delete records with type = "planned" for compliance; let's fix that
+deltaTable = DeltaTable.forPath(spark, f"{mount_location}/yourname/silver/disturbances")
+
 # Declare the predicate by using a SQL-formatted string.
 deltaTable.delete("type = 'planned'")
 
@@ -224,166 +232,49 @@ deltaTable.delete("type = 'planned'")
 
 # COMMAND ----------
 
-# DBTITLE 1,Display the history of your Delta Table
+# MAGIC %md
+# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) Configuring autoloader to switch between 'merge' mode and 'rescue' mode
+# MAGIC
+# MAGIC Autoloader offers several configuration options in order to deal with schema drifts. Rerun the step # 1: Create Pyspark dataframe from JSON response and add an additional column. See what happens with the additional column when running your structured streaming with merge modus enabled. Afterwards, rerun this sequence and comment out the merge statement and use the rescue mode. Validate what happens with your saved data.
+
+# COMMAND ----------
+
+# DBTITLE 1,Display the history of your Delta Table - do you notice the modification(s) you made?
 display(deltaTable.history())
 
 # COMMAND ----------
 
 # MAGIC %md-sandbox
 # MAGIC
-# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) 2/ Loading our silver data into a Spark stream, transforming and storing it onto the gold layer
+# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) 3/ Loading our silver delta table into a Spark stream, transforming and storing it onto the gold layer
 # MAGIC <div style="float:right">
 # MAGIC   <img width="700px" src="files/tables/schema.png"/>
 # MAGIC </div>
 # MAGIC
 # MAGIC The Autoloader allows us to efficiently ingest millions of files from a cloud storage, and support efficient schema inference and evolution at scale.
 # MAGIC
-# MAGIC Let's use it to ingest the bronze parquet data being delivered in our storage account
-# MAGIC into the *silver* table
+# MAGIC Let's use it to ingest the silver delta table data being delivered in our storage account
+# MAGIC into the *gold* layer
 
 # COMMAND ----------
 
-silver_stream = (spark.readStream 
-        .load(f"{mount_location}/yourname/silver/disturbances")
-        
+# DBTITLE 1,Use an aggregation like a count to offer a view on the data and store this as a delta table to the golden layer
+silver_stream = (spark.readStream \
+        .load(f"{mount_location}/yourname/silver/disturbances") \
+        .groupBy("title").count().sort(desc("count")) \
+
       .writeStream
-        .option("checkpointLocation", f"{mount_location}/yourname/gold/disturbances/checkpoint/disturbances")
+        .option("checkpointLocation", f"{mount_location}/yourname/gold/disturbances/aggegration/checkpoint/disturbances")
+        .outputMode("complete")## Append is the default, but then you need to configure watermarks
         .trigger(once=True)
-        .start(f"{mount_location}/yourname/gold/disturbances/")
+        .start(f"{mount_location}/yourname/gold/disturbances/aggegration/")
 )
+        
+    
 
 # COMMAND ----------
 
 # DBTITLE 1,Show the delta table as a dataframe to inspect the output
-gold_stream = DeltaTable.forPath(spark, f"{mount_location}/yourname/gold/disturbances")   
+gold_stream = DeltaTable.forPath(spark, f"{mount_location}/yourname/gold/disturbances/aggegration/")   
 display(gold_stream.toDF())
 
-
-# COMMAND ----------
-
-# MAGIC %md-sandbox
-# MAGIC
-# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) 2/ Silver data: anonimized table, date cleaned
-# MAGIC
-# MAGIC <img width="700px" style="float:right" src="https://raw.githubusercontent.com/QuentinAmbard/databricks-demo/main/retail/resources/images/lakehouse-retail/lakehouse-retail-churn-de-delta-2.png"/>
-# MAGIC
-# MAGIC We can chain these incremental transformation between tables, consuming only new data.
-# MAGIC
-# MAGIC This can be triggered in near realtime, or in batch fashion, for example as a job running every night to consume daily data.
-
-# COMMAND ----------
-
-# DBTITLE 1,Silver table for the users data
-from pyspark.sql.functions import sha1, col, initcap, to_timestamp
-
-(spark.readStream
-        .table("churn_users_bronze")
-        .withColumnRenamed("id", "user_id")
-        .withColumn("email", sha1(col("email")))
-        .withColumn("creation_date", to_timestamp(col("creation_date"), "MM-dd-yyyy H:mm:ss"))
-        .withColumn("last_activity_date", to_timestamp(col("last_activity_date"), "MM-dd-yyyy HH:mm:ss"))
-        .withColumn("firstname", initcap(col("firstname")))
-        .withColumn("lastname", initcap(col("lastname")))
-        .withColumn("age_group", col("age_group").cast('int'))
-        .withColumn("gender", col("gender").cast('int'))
-        .drop(col("churn"))
-        .drop(col("_rescued_data"))
-      .writeStream
-        .option("checkpointLocation", f"{deltaTablesDirectory}/checkpoint/users")
-        .trigger(once=True)
-        .table("churn_users").awaitTermination())
-
-# COMMAND ----------
-
-# MAGIC %sql select * from churn_users;
-
-# COMMAND ----------
-
-# DBTITLE 1,Silver table for the orders data
-(spark.readStream 
-        .table("churn_orders_bronze")
-        .withColumnRenamed("id", "order_id")
-        .withColumn("amount", col("amount").cast('int'))
-        .withColumn("item_count", col("item_count").cast('int'))
-        .withColumn("creation_date", to_timestamp(col("transaction_date"), "MM-dd-yyyy H:mm:ss"))
-        .drop(col("_rescued_data"))
-      .writeStream
-        .option("checkpointLocation", f"{deltaTablesDirectory}/checkpoint/orders")
-        .trigger(once=True)
-        .table("churn_orders").awaitTermination())
-
-# COMMAND ----------
-
-# MAGIC %sql select * from churn_orders;
-# MAGIC #extra comment
-
-# COMMAND ----------
-
-# MAGIC %md-sandbox
-# MAGIC ### 3/ Aggregate and join data to create our ML features
-# MAGIC
-# MAGIC <img width="700px" style="float:right" src="https://raw.githubusercontent.com/QuentinAmbard/databricks-demo/main/retail/resources/images/lakehouse-retail/lakehouse-retail-churn-de-delta-3.png"/>
-# MAGIC
-# MAGIC
-# MAGIC We are now ready to create the features required for our churn prediction.
-# MAGIC
-# MAGIC We need to enrich our user dataset with extra information which our model will use to help predicting churn, sucj as:
-# MAGIC
-# MAGIC * last command date
-# MAGIC * number of item bought
-# MAGIC * number of actions in our website
-# MAGIC * device used (ios/iphone)
-# MAGIC * ...
-
-# COMMAND ----------
-
-# DBTITLE 1,Creating a "gold table" to be used by the Machine Learning practitioner
-spark.sql(
-  """
-    CREATE OR REPLACE TABLE churn_features AS
-      WITH
-        churn_orders_stats AS (
-          SELECT
-            user_id,
-            count(*) as order_count,
-            sum(amount) as total_amount,
-            sum(item_count) as total_item,
-            max(creation_date) as last_transaction
-          FROM churn_orders
-          GROUP BY user_id
-        ),  
-        churn_app_events_stats AS (
-          SELECT
-            first(platform) as platform,
-            user_id,
-            count(*) as event_count,
-            count(distinct session_id) as session_count,
-            max(to_timestamp(date, "MM-dd-yyyy HH:mm:ss")) as last_event
-          FROM churn_app_events GROUP BY user_id
-        )
-        SELECT
-          *, 
-          datediff(now(), creation_date) as days_since_creation,
-          datediff(now(), last_activity_date) as days_since_last_activity,
-          datediff(now(), last_event) as days_last_event
-        FROM churn_users
-        INNER JOIN churn_orders_stats using (user_id)
-        INNER JOIN churn_app_events_stats using (user_id)
-  """
-)
-
-display(spark.table("churn_features"))
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Exploiting the benefits of Delta
-# MAGIC
-# MAGIC ### (a) Simplifing operations with transactional DELETE/UPDATE/MERGE operations
-# MAGIC
-# MAGIC Traditional Data Lakes struggle to run even simple DML operations. Using Databricks and Delta Lake, your data is stored on your blob storage with transactional capabilities. You can issue DML operation on Petabyte of data without having to worry about concurrent operations.
-
-# COMMAND ----------
-
-# DBTITLE 1,We just realised we have to delete users created before 2016-01-01 for compliance; let's fix that
-# MAGIC %sql DELETE FROM churn_users where creation_date < '2016-01-01T03:38:55.000+0000';
