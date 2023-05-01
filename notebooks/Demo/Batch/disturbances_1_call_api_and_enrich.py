@@ -59,7 +59,7 @@ disturbances_df = spark.createDataFrame(response['disturbance'],
                          .withColumn('import_timestamp', current_timestamp())\
                          .withColumn('created_by', lit('Levi Devos'))      
 
-disturbances_df.show()
+display(disturbances_df)
 
 # COMMAND ----------
 
@@ -90,7 +90,7 @@ for lang in langs:
 
 # DBTITLE 1,Read into Pandas df to flatten, then parallelize as Spark DF
 stations_df = spark.createDataFrame(pd.json_normalize(responses))
-stations_df.show()
+display(stations_df)
 
 # COMMAND ----------
 
@@ -165,6 +165,10 @@ disturbance_locations_df.write.parquet(f"{mount_location}/disturbances_enriched/
 # COMMAND ----------
 
 display(disturbance_locations_df)
+
+# COMMAND ----------
+
+display(all_names_df)
 
 # COMMAND ----------
 

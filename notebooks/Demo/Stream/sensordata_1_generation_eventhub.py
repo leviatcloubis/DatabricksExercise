@@ -12,9 +12,9 @@ import random
 import json
 from azure.servicebus import ServiceBusService
 # Config this with your Azure EventHub parameters
-az_service_namespace = 'iotaprilsensordata'
-az_shared_access_key_name = 'Senderpolicy'
-az_shared_access_key_value = '+u8+DgOQ109bT7cVTq8ujdnjMLBgIXa/f+AEhEErMfQ='
+az_service_namespace = dbutils.secrets.get(scope="sensordata", key = "namespace")
+az_shared_access_key_name = dbutils.secrets.get(scope="sensordata", key = "key_name")
+az_shared_access_key_value = dbutils.secrets.get(scope="sensordata", key = "key_value")
 
 
 sbs = ServiceBusService(service_namespace=az_service_namespace, shared_access_key_name=az_shared_access_key_name, shared_access_key_value=az_shared_access_key_value)
