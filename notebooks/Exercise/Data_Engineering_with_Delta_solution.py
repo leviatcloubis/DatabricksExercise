@@ -41,7 +41,7 @@
 # MAGIC
 # MAGIC  * 1: API call --> Parse to parquet --> store on bronzen layer with .write.parquet
 # MAGIC  * 2: Bronzen layer --> Autoloader --> store on silver layer with delta format
-# MAGIC  * 3: Silver layer --> Read delta path into stream --> Transformations --> store on golden layer with delta format
+# MAGIC  * 3: Silver layer --> Read delta path into Structured Streaming --> Transformations --> store on golden layer with delta format
 
 # COMMAND ----------
 
@@ -277,4 +277,21 @@ silver_stream = (spark.readStream \
 # DBTITLE 1,Show the delta table as a dataframe to inspect the output
 gold_stream = DeltaTable.forPath(spark, f"{mount_location}/yourname/gold/disturbances/aggegration/")   
 display(gold_stream.toDF())
+
+
+# COMMAND ----------
+
+# MAGIC %md-sandbox
+# MAGIC
+# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) 4/ As a final step, you can expose your silver/golden data to a Power BI dashboard 
+# MAGIC <div style="float:right">
+# MAGIC   <img width="700px" src="files/tables/schema.png"/>
+# MAGIC </div>
+# MAGIC
+# MAGIC In order to read delta tables from the ADLS, we use a custom function for power query which is explained on the Wiki:
+# MAGIC
+# MAGIC https://dev.azure.com/cloubis/Azure%20Data%20Platform/_wiki/wikis/Azure%20Data%20Platform%20Knowledge%20Hub/167/Connector-Delta-lake-to-power-BI
+
+# COMMAND ----------
+
 

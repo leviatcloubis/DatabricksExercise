@@ -41,7 +41,7 @@
 # MAGIC
 # MAGIC  * 1: API call --> Parse to parquet --> store on bronzen layer with .write.parquet
 # MAGIC  * 2: Bronzen layer --> Autoloader --> store on silver layer with delta format
-# MAGIC  * 3: Silver layer --> Read delta path into stream --> Transformations --> store on golden layer with delta format
+# MAGIC  * 3: Silver layer --> Read delta path into Structured Streaming --> Transformations --> store on golden layer with delta format
 
 # COMMAND ----------
 
@@ -72,9 +72,9 @@ from pyspark.sql.functions import current_timestamp
 
 response = requests.post("https://api.irail.be/disturbances/?format=json&lineBreakCharacter=''&lang=nl").json()
 
-# Inspect the json
+# Write a statement to be able to inspect above JSON to validate whether it is looking like a valid JSON
 
-display(response)
+'''''''''''''
 
 # COMMAND ----------
 
@@ -84,9 +84,9 @@ display(response)
 # COMMAND ----------
 
 # DBTITLE 1,Check whether our mount location is configured
-# find a more convenient way to show this 
+dbutils.fs.mounts()
 
-display(dbutils.fs.mounts())
+# find a more convenient way to show this 
 
 
 # COMMAND ----------
@@ -108,7 +108,9 @@ storage_container = 'exercise'
 
 mount_location = f"/mnt/{storage_account}/{storage_container}"
 
-##EXERCISE: insert deleted container
+# Print the above location. Is it what you expected? What could be going on?
+
+'''''''''''''
 
 # COMMAND ----------
 
@@ -173,7 +175,7 @@ disturbances_df.write.parquet(f"{mount_location}/yourname/bronze/disturbances/{c
 # COMMAND ----------
 
 # DBTITLE 1,Create a new function "ingest_folder" which contains the parameters for autoloader
-def ingest_folder(folder, data_format, landing, table):
+def new_function(folder, data_format, landing, table):
   bronze_products = (spark.readStream
                       .format("cloudFiles")
                       .option("cloudFiles.format", data_format)
@@ -197,7 +199,7 @@ def ingest_folder(folder, data_format, landing, table):
 
 
 ##EXERCISE: Add columns which are appropriate for the silver layer
-##EXERCISE: rename function 
+##EXERCISE: rename function to ingest_folder
 
 
 # COMMAND ----------
@@ -258,7 +260,7 @@ display(deltaTable.history())
 
 # COMMAND ----------
 
-# DBTITLE 1,Use an aggregation like a count to offer a view on the data and store this as a delta table to the golden layer
+# DBTITLE 1,Use an aggregationt to offer a view on the data and store this as a delta table to the golden layer
 silver_stream = (spark.readStream \
         .load(f"{mount_location}/yourname/silver/disturbances") \
         .groupBy("title").count().sort(desc("count")) \
@@ -277,4 +279,21 @@ silver_stream = (spark.readStream \
 # DBTITLE 1,Show the delta table as a dataframe to inspect the output
 gold_stream = DeltaTable.forPath(spark, f"{mount_location}/yourname/gold/disturbances/aggegration/")   
 display(gold_stream.toDF())
+
+
+# COMMAND ----------
+
+# MAGIC %md-sandbox
+# MAGIC
+# MAGIC ## ![](https://pages.databricks.com/rs/094-YMS-629/images/delta-lake-tiny-logo.png) 4/ As a final step, you can expose your silver/golden data to a Power BI dashboard 
+# MAGIC <div style="float:right">
+# MAGIC   <img width="700px" src="files/tables/schema.png"/>
+# MAGIC </div>
+# MAGIC
+# MAGIC In order to read delta tables from the ADLS, we use a custom function for power query which is explained on the Wiki:
+# MAGIC
+# MAGIC https://dev.azure.com/cloubis/Azure%20Data%20Platform/_wiki/wikis/Azure%20Data%20Platform%20Knowledge%20Hub/167/Connector-Delta-lake-to-power-BI
+
+# COMMAND ----------
+
 
